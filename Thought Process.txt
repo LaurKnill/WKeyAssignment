@@ -1,0 +1,2 @@
+- I have only used Rojo/Git with a branch that a superior set up for me. This is my first time setting up my own repository. I asked Chat GPT for steps.
+- I have never used a custom replication system before. That's scary

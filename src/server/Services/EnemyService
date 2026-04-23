@@ -1,0 +1,57 @@
+local EnemyService = {}
+
+--[[
+1 enemy spawn per second
+20 enemies maximum (enemies stop spawning when cap is reached) 
+The above variables can be adjusted through a user-interface of any kind (billboard, physical buttons, ui, etc)
+> REMOTES
+> CONFIGURATIONS: spawns per second, max enemies
+]]
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Local
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Public
+
+function EnemyService.spawnEnemy()
+    --[[
+        Enemies spawn on a 50x50 studs platform
+        The enemy model can be anything 
+        There should be random variations to enemies, each one should have something random about them like their color, material, or size.
+        The only requirement is that enemy random attributes are consistent across all clients (all clients see the same thing) 
+        Each enemy must have a unique identifier (ID) that is consistent across both server & client.
+        When a player clicks on an enemy, that enemy’s ID should be printed on both the server and client
+    ]]
+end
+
+function EnemyService.killAll()
+    -- Client UI button to kill all
+end
+
+--[[
+CUSTOM REPLICATION
+    Enemy movement should be as performant as possible in regard to replication cost
+    Submissions will be judged based on the network ‘Recv’ stat in ‘performance stats’
+]]
+
+--[[
+ENEMY BEHAVIOR:
+    Enemy chases the closest player who is on their platform. Ignores players outside of the platform
+    When an enemy is close to a player, they do something. They can play an animation, attack and deal damage, or just print to console
+    Enemies are not required to pathfind
+    (Optional) enemy wanders within their platform randomly
+]]
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+-- Init
+
+function EnemyService._init()
+    print("Enemy service initialized")
+end
+
+function EnemyService._start()
+    print("Enemy service started")
+end
+
+return EnemyService
