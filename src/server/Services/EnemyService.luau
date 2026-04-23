@@ -1,5 +1,9 @@
 local EnemyService = {}
 
+-- // Requires
+local Objects = script.Parent.Parent.Objects
+local Enemy = require(Objects.Enemy)
+
 --[[
 1 enemy spawn per second
 20 enemies maximum (enemies stop spawning when cap is reached) 
@@ -7,6 +11,8 @@ The above variables can be adjusted through a user-interface of any kind (billbo
 > REMOTES
 > CONFIGURATIONS: spawns per second, max enemies
 ]]
+
+local enemiesCreated = 0
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Local
@@ -16,13 +22,17 @@ The above variables can be adjusted through a user-interface of any kind (billbo
 
 function EnemyService.spawnEnemy()
     --[[
-        Enemies spawn on a 50x50 studs platform
-        The enemy model can be anything 
-        There should be random variations to enemies, each one should have something random about them like their color, material, or size.
-        The only requirement is that enemy random attributes are consistent across all clients (all clients see the same thing) 
-        Each enemy must have a unique identifier (ID) that is consistent across both server & client.
-        When a player clicks on an enemy, that enemy’s ID should be printed on both the server and client
+        [x] 50x50 platform exists
+            [ ] Spawn enemies on it (wait for replication logic)
+        [x] Enemies have random attributes (color, material, size)
+        [x] Enemies have unique IDs
+            [ ] Replicated to client (wait for replication logic)
+            [ ] Clicking an enemy prints its ID on both server and client
     ]]
+    enemiesCreated += 1
+    local id = enemiesCreated
+    local NewEnemy = Enemy.new(id, BrickColor.Random().Color)
+    --> REPLICATE TO CLIENT Todo:Replication
 end
 
 function EnemyService.killAll()
@@ -47,6 +57,9 @@ ENEMY BEHAVIOR:
 -- Init
 
 function EnemyService._init()
+    for i = 1, 20 do -- TODO: adjustable 1 spawn per second until 20 max
+        EnemyService.spawnEnemy()
+    end
     print("[🤖] Enemy service initialized")
 end
 
