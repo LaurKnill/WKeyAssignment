@@ -20,11 +20,11 @@ function WorldService._init()
     BasePlatform.CanCollide = true
     BasePlatform.CanTouch = true
     BasePlatform.Parent = workspace
-    print("World Service initialized")
+    print("[🤖] World Service initialized")
 end
 
 function WorldService._start()
-    print("World service started")
+    print("[🤖] World service started")
 end
 
 return WorldService

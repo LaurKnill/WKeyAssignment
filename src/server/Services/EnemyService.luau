@@ -47,11 +47,11 @@ ENEMY BEHAVIOR:
 -- Init
 
 function EnemyService._init()
-    print("Enemy service initialized")
+    print("[🤖] Enemy service initialized")
 end
 
 function EnemyService._start()
-    print("Enemy service started")
+    print("[🤖] Enemy service started")
 end
 
 return EnemyService

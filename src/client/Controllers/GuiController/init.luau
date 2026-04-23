@@ -60,13 +60,14 @@ function GuiController._init()
             local Success, Controller = pcall(require, GuiModule)
             if Success and Controller and type(Controller) == "table" then
                 GuiControllers[GuiModule.Name] = Controller
+                Controller._init()
             else
                 warn(`Failed to initialize gui controller: {GuiModule.Name}`)
             end
         end
     end
 
-    print("Gui Controller initialized")
+    print("[💻] Gui Controller initialized")
 end
 
 function GuiController._start()
@@ -76,7 +77,7 @@ function GuiController._start()
             warn(`Failed to start gui controller: {Error}`)
         end 
     end
-    print("Gui Controller started")
+    print("[💻] Gui Controller started")
 end
 
 return GuiController

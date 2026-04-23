@@ -25,11 +25,11 @@ end
 -- Init
 
 function GuiTemplate._init()
-    print(`{script.Name} gui controller initialized`)
+    print(`[📱] {script.Name}_Gui initialized`)
 end
 
 function GuiTemplate._start()
-    print(`{script.Name} gui controller started`)
+    print(`[📱] {script.Name}_Gui started`)
 end
 
 return GuiTemplate

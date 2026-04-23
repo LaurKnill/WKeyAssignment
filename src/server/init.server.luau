@@ -5,12 +5,13 @@ for i, Service in pairs(script.Services:GetChildren()) do
     if Service:IsA("ModuleScript") then
         local Success, Result = pcall(function()
             local ServiceModule = require(Service)
+            Services[Service.Name] = ServiceModule
             if type(ServiceModule._init) == "function" then
                 ServiceModule._init()
             end
         end)
         if not Success then
-            warn(`Failed to initialize service: {Service.Name} with error: {tostring(Result)}`)
+            warn(`[🤖] Failed to initialize service: {Service.Name} with error: {tostring(Result)}`)
         end
     end
 end
@@ -22,7 +23,7 @@ for name, ServiceModule in pairs(Services) do
             ServiceModule._start()
         end)
         if not Success then
-            warn(`Failed to start service: {name} with error: {tostring(Result)}`)
+            warn(`[🤖] Failed to start service: {name} with error: {tostring(Result)}`)
         end
     end
 end
