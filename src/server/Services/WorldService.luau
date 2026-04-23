@@ -12,8 +12,15 @@ local WorldService = {}
 -- Init
 
 function WorldService._init()
-    print("World service initialized")
-    --> CREATE 50x50 STUDS PLATFORM FOR ENEMIES TO SPAWN ON
+    local BasePlatform = Instance.new("Part")
+    BasePlatform.Name = "BasePlatform"
+    BasePlatform.Size = Vector3.new(50, 1, 50)
+    BasePlatform.Position = Vector3.new(0, -10, 0)
+    BasePlatform.Anchored = true
+    BasePlatform.CanCollide = true
+    BasePlatform.CanTouch = true
+    BasePlatform.Parent = workspace
+    print("World Service initialized")
 end
 
 function WorldService._start()
