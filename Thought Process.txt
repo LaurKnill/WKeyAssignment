@@ -1,3 +1,4 @@
 - I have only used Rojo/Git with a branch that a superior set up for me. This is my first time setting up my own repository. I asked Chat GPT for steps.
 - I have never used a custom replication system before. That's scary
 - I'm waking way more commits than an actual project to be transparent about progress steps
+- I've used AI to ask how a custom replication system could be set up only in server code without workspace part replication.

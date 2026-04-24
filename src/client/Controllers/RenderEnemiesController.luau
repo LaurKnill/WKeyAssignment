@@ -31,6 +31,25 @@ local function _clickedOn()
     -- TODO: Clicking on an enemy prints its ID on both server and client
 end
 
+local function swagify(enemyId: string)
+    local RenderedEnemy = RenderedEnemies[enemyId]
+    if RenderedEnemy then
+        local Part = RenderedEnemy.Part
+        Part.Size = Vector3.new(4, 7.5, .01)
+        Part.Transparency = 1
+
+        -- These aren't stored anywhere because in this demo nothing further is done with them
+        local FrontDecal = Instance.new("Decal")
+        FrontDecal.Parent = Part
+        FrontDecal.Face = Enum.NormalId.Front
+        FrontDecal.Texture = "http://www.roblox.com/asset/?id=73257033"
+        local BackDecal = FrontDecal:Clone()
+        BackDecal.Face = Enum.NormalId.Back
+        BackDecal.Parent = Part
+        RenderedEnemy.Swag = true
+    end
+end
+
 -- // Swags face the client at all times
 local function renderSwags()
     RunService.Heartbeat:Connect(function()
@@ -57,6 +76,9 @@ local function renderEnemy(EnemyData: DataTypes.NewEnemyRenderData)
         AlreadyRendered.Part.CFrame = CFrame.new(EnemyData.Position) * CFrame.Angles(0, math.rad(EnemyData.Rotation), 0)
         AlreadyRendered.Rotation = EnemyData.Rotation
         AlreadyRendered.Position = EnemyData.Position
+        if AlreadyRendered.Swag then
+            swagify(EnemyData.Id)
+        end
         return
     end
     local Part = Instance.new("Part")
@@ -71,6 +93,9 @@ local function renderEnemy(EnemyData: DataTypes.NewEnemyRenderData)
         Part = Part,
         CFrame = CFrame
     }
+    if EnemyData.IsSwag then
+        swagify(EnemyData.Id)
+    end
 end
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -91,10 +116,30 @@ function RenderEnemiesController._start()
     lastRenderedFrameId = math.huge -- we're not ready to render anything yet
 
     ReplicateEnemiesEvent.OnClientEvent:Connect(function(renderFrame: number, EnemyPackage: {[string]: {number}})
-        for id, data in pairs(EnemyPackage) do
-            if renderFrame < lastRenderedFrameId then
-                continue
+        if lastRenderedFrameId == -1 then
+            -- This is the first frame; instantly place all enemies as they may have already moved greatly from their original loaded positions
+            -- (in a more professional project we could probably set up a separate initial event, disconnect that, and then setup a normal event, but that's trying too hard here)
+            lastRenderedFrameId = renderFrame
+            for id, data in pairs(EnemyPackage) do
+                local RenderedEnemy = RenderedEnemies[id]
+                if not RenderedEnemy then
+                    print(`~ Skipping enemy not yet rendered`)
+                    continue
+                end
+                local positionX = data[1]
+                local positionZ = data[2]
+                local rotation = data[3]
+                local newCFrame = CFrame.new(positionX, -5, positionZ) * CFrame.Angles(0, math.rad(rotation), 0)
+                RenderedEnemy.CFrame = newCFrame
+                RenderedEnemy.Part.CFrame = newCFrame
             end
+            return
+        end
+        if renderFrame < lastRenderedFrameId then
+            return
+        end
+        for id, data in pairs(EnemyPackage) do
+            lastRenderedFrameId = renderFrame
             local RenderedEnemy = RenderedEnemies[id]
             if not RenderedEnemy then
                 print(`~ Skipping enemy not yet rendered`)
@@ -114,24 +159,7 @@ function RenderEnemiesController._start()
     end)
 
     -- // TODO: Moves weirdly for a second, i think because the last position tween is still in motion
-    EnemyBecameSwagEvent.OnClientEvent:Connect(function(enemyId: string)
-        local RenderedEnemy = RenderedEnemies[enemyId]
-        if RenderedEnemy then
-            local Part = RenderedEnemy.Part
-            Part.Size = Vector3.new(4, 7.5, .01)
-            Part.Transparency = 1
-
-            -- These aren't stored anywhere because in this demo nothing further is done with them
-            local FrontDecal = Instance.new("Decal")
-            FrontDecal.Parent = Part
-            FrontDecal.Face = Enum.NormalId.Front
-            FrontDecal.Texture = "http://www.roblox.com/asset/?id=73257033"
-            local BackDecal = FrontDecal:Clone()
-            BackDecal.Face = Enum.NormalId.Back
-            BackDecal.Parent = Part
-            RenderedEnemy.Swag = true
-        end
-    end)
+    EnemyBecameSwagEvent.OnClientEvent:Connect(swagify)
 
     local InitialEnemies: {[string]: DataTypes.NewEnemyRenderData} = GetEnemiesFunction:InvokeServer() -- In a real project with a larger world, we'd be making this based on chunk
     if InitialEnemies then

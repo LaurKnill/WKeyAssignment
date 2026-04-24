@@ -179,6 +179,7 @@ function EnemyService._start()
                 Id = id,
                 Color = Enemy.Color,
                 Size = Enemy.Size,
+                Swag = Enemy.SwagEnabled,
                 Position = Enemy.Position,
                 Rotation = Enemy.Rotation
             }

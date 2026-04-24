@@ -2,6 +2,7 @@ export type NewEnemyRenderData = {
     Color: Color3,
     Id: string,
     Size: Vector3,
+    Swag: boolean?,
     Position: Vector3,
     Rotation: number
 }
