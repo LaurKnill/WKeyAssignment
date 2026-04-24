@@ -7,6 +7,7 @@ local Root = script.Parent.Parent
 local Shared = game.ReplicatedStorage.Shared
 local Remotes = require(Shared.Remotes)
 local DataTypes = require(Shared.DataTypes)
+local Config = require(Shared.Config)
 
 local GetEnemiesFunction = Remotes.getFunction("GetEnemies")
 local EnemySpawnedEvent = Remotes.getEvent("EnemySpawned")
@@ -93,7 +94,7 @@ local function renderEnemy(EnemyData: DataTypes.NewEnemyRenderData)
         Part = Part,
         CFrame = CFrame
     }
-    if EnemyData.IsSwag then
+    if EnemyData.Swag then
         swagify(EnemyData.Id)
     end
 end
@@ -129,7 +130,7 @@ function RenderEnemiesController._start()
                 local positionX = data[1]
                 local positionZ = data[2]
                 local rotation = data[3]
-                local newCFrame = CFrame.new(positionX, -5, positionZ) * CFrame.Angles(0, math.rad(rotation), 0)
+                local newCFrame = CFrame.new(positionX, Config.EnemyHeight, positionZ) * CFrame.Angles(0, math.rad(rotation), 0)
                 RenderedEnemy.CFrame = newCFrame
                 RenderedEnemy.Part.CFrame = newCFrame
             end

@@ -13,21 +13,26 @@ local Shared = game.ReplicatedStorage.Shared
 local Remotes = require(Shared.Remotes)
 local DataTypes = require(Shared.DataTypes)
 
---[[
--- TODO: 1 enemy per second until 20 max, adjustable through UI
-]]
-
+-- // Configurable
+local timeBetweenEnemySpawns = 1
 local enemiesCreated = 0
+local maxEnemies = 20
+-- TODO: configurable by UI
+
+-- // Other
 local renderFrame = 0
 local minimumChaseDistance = 15
+local A_Client_Has_Loaded = false -- May not be the most necessary in a live game but it prevents annoying edge cases during development where enemies are behaving before the client has registered local remotes
 
+-- // Events
 local EnemySpawnedEvent = Remotes.newEvent("EnemySpawned")
 local GetEnemiesFunction = Remotes.newFunction("GetEnemies")
 local ClickedOnEvent = Remotes.newEvent("ClickedOn")
 local EnemyBecameSwagEvent = Remotes.newEvent("EnemyBecameSwag")
 local ReplicateEnemiesEvent = Remotes.newUnreliableRemoteEvent("ReplicateEnemies")
-
-local A_Client_Has_Loaded = false -- May not be the most necessary in a live game but it prevents annoying edge cases during development where enemies are behaving before the client has registered local remotes
+local ChangeSettingEvent = Remotes.newEvent("ChangeSetting")
+local KillAllEvent = Remotes.newEvent("KillAll")
+local InitSettingFunction = Remotes.newFunction("InitSetting")
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Local
@@ -128,6 +133,15 @@ local function runEnemyBehavior()
     end)
 end
 
+local function spawnInitialEnemies()
+    task.spawn(function()
+        repeat
+            EnemyService.spawnEnemy()
+            task.wait(timeBetweenEnemySpawns)
+        until enemiesCreated >= maxEnemies
+    end)
+end
+
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Public
 
@@ -136,6 +150,15 @@ function EnemyService.spawnEnemy()
     local id = tostring(enemiesCreated)
     local NewEnemy = Enemy.new(id, BrickColor.Random().Color)
     Enemies[id] = NewEnemy
+    EnemySpawnedEvent:FireAllClients({
+                Id = id,
+                Color = NewEnemy.Color,
+                Size = NewEnemy.Size,
+                Swag = NewEnemy.SwagEnabled,
+                Position = NewEnemy.Position,
+                Rotation = NewEnemy.Rotation
+        }
+    )
 end
 
 function EnemyService.killAll()
@@ -152,18 +175,16 @@ CUSTOM REPLICATION
 --[[
 ENEMY BEHAVIOR:
     Enemy chases the closest player who is on their platform. Ignores players outside of the platform
-    When an enemy is close to a player, they do something. They can play an animation, attack and deal damage, or just print to console
-    Enemies are not required to pathfind
-    (Optional) enemy wanders within their platform randomly
+    -- TODO: IGNORES PLAYERS OUTSIDE OF THE PLATFORM!
+    [x] When an enemy is close to a player, they do something. They can play an animation, attack and deal damage, or just print to console
+    [ ] (Optional) enemy wanders within their platform randomly
 ]]
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Init
 
 function EnemyService._init()
-    for i = 1, 20 do -- TODO: adjustable 1 spawn per second until 20 max
-        EnemyService.spawnEnemy()
-    end
+    spawnInitialEnemies()
     runEnemyBehavior()
     runEnemyVelocity()
     runEnemyReplication()
@@ -187,9 +208,23 @@ function EnemyService._start()
         return EnemyData
     end
 
+    ChangeSettingEvent.OnServerEvent:Connect(function(Player: Player, settingName: "EnemiesPerSecond" | "MaxEnemies", newValue: number)
+        if settingName == "EnemiesPerSecond" then
+            timeBetweenEnemySpawns = 1 / newValue
+        elseif settingName == "MaxEnemies" then
+            maxEnemies = newValue -- TODO: if current max enemies is smaller than this number, create more. if its smaller... delete some random ones...?
+        end
+    end)
+
     ClickedOnEvent.OnServerEvent:Connect(function(Player: Player, enemyId: string)
         print(`Clicked on {enemyId}`)
     end)
+
+    KillAllEvent.OnServerEvent:Connect(EnemyService.killAll)
+
+    InitSettingFunction.OnServerInvoke = function(Player: Player)
+       return timeBetweenEnemySpawns, maxEnemies
+    end
 
     print("[🤖] Enemy service started")
 end
