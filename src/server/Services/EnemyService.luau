@@ -24,6 +24,7 @@ local minimumChaseDistance = 15
 local EnemySpawnedEvent = Remotes.newEvent("EnemySpawned")
 local GetEnemiesFunction = Remotes.newFunction("GetEnemies")
 local ClickedOnEvent = Remotes.newEvent("ClickedOn")
+local EnemyBecameSwagEvent = Remotes.newEvent("EnemyBecameSwag")
 local ReplicateEnemiesEvent = Remotes.newUnreliableRemoteEvent("ReplicateEnemies")
 
 local A_Client_Has_Loaded = false -- May not be the most necessary in a live game but it prevents annoying edge cases during development where enemies are behaving before the client has registered local remotes
@@ -43,7 +44,11 @@ local function runEnemyReplication()
         while task.wait(0.1) do
             renderFrame += 1
             local package = {}
+            -- // Enemy data is sent including for enemies that haven't moved, which could technically be omitted, but I assume we want this for anti-cheat/consistency
             for id, Enemy in pairs(Enemies) do
+                if Enemy.SwagEnabled then
+                    continue
+                end
                 package[id] = {Enemy.Position.X, Enemy.Position.Z, Enemy.Rotation}
             end
             ReplicateEnemiesEvent:FireAllClients(renderFrame, package)
@@ -54,6 +59,9 @@ end
 local function runEnemyVelocity()
     RunService.Heartbeat:Connect(function(dt)
         for id, Enemy in pairs(Enemies) do
+            if Enemy.SwagEnabled then
+                continue -- Enemy has already touched player
+            end
             local Velocity = Enemy.Velocity
             local Target = Enemy.Target
             if not Velocity or not Target then
@@ -70,7 +78,8 @@ local function runEnemyVelocity()
             if (newPosition - Enemy.Destination).Magnitude < 1 then
                 Enemy.Velocity = nil
                 Enemy.Target = nil
-                -- TODO: enemy has reached target (touched player?) something happens
+                Enemy:BecomeSwag()
+                EnemyBecameSwagEvent:FireAllClients(id)
             end
         end
     end)

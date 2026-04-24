@@ -7,6 +7,8 @@ export type Object = {
     Size: Vector3,
     Position: Vector3,
     Rotation: number,
+    
+    SwagEnabled: boolean?,
 
     Velocity: Vector3?,
     Destination: Vector3?,
@@ -29,6 +31,10 @@ function Enemy:MoveToTarget(Target: Model)
     local direction = (destination - self.Position).Unit
     self.Velocity = direction * 5
     self.Destination = destination
+end
+
+function Enemy:BecomeSwag()
+    self.SwagEnabled = true
 end
 
 return Enemy

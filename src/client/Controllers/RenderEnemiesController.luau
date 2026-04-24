@@ -1,5 +1,6 @@
 local RenderEnemiesController = {}
 
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Root = script.Parent.Parent
@@ -11,11 +12,13 @@ local GetEnemiesFunction = Remotes.getFunction("GetEnemies")
 local EnemySpawnedEvent = Remotes.getEvent("EnemySpawned")
 local ClickedOnEvent = Remotes.getEvent("ClickedOn")
 local ReplicateEnemiesEvent = Remotes.getEvent("ReplicateEnemies")
+local EnemyBecameSwagEvent = Remotes.getEvent("EnemyBecameSwag")
 
 local RenderedEnemies: {
     [string]: {
         Part: Part,
-        CFrame: CFrame
+        CFrame: CFrame,
+        Swag: true?
     }
 } = {}
 
@@ -26,6 +29,25 @@ local lastRenderedFrameId = -1
 
 local function _clickedOn()
     -- TODO: Clicking on an enemy prints its ID on both server and client
+end
+
+-- // Swags face the client at all times
+local function renderSwags()
+    RunService.Heartbeat:Connect(function()
+        for id, RenderedEnemy in pairs(RenderedEnemies) do
+            if not RenderedEnemy.Swag then
+                continue
+            end
+            -- Rotate RenderedEnemy.Part to face the client character
+            local Character = game.Players.LocalPlayer.Character
+            if not Character or not Character:FindFirstChild("HumanoidRootPart") then
+                continue
+            end
+            local MyPosition = Character:GetPivot().Position
+            local myPositionFlat = Vector3.new(MyPosition.X, RenderedEnemy.Part.Position.Y, MyPosition.Z)
+            RenderedEnemy.Part.CFrame = CFrame.lookAt(RenderedEnemy.Part.Position, myPositionFlat)
+        end
+    end)
 end
 
 local function renderEnemy(EnemyData: DataTypes.NewEnemyRenderData)
@@ -39,8 +61,7 @@ local function renderEnemy(EnemyData: DataTypes.NewEnemyRenderData)
     end
     local Part = Instance.new("Part")
     Part.Anchored = true
-    Part.CanCollide = true
-    Part.CanTouch = true
+    Part.CanCollide = false
     Part.Size = EnemyData.Size
     Part.Color = EnemyData.Color
     local CFrame = CFrame.new(EnemyData.Position) * CFrame.Angles(0, math.rad(EnemyData.Rotation), 0)
@@ -59,12 +80,8 @@ end
 -- Init
 
 function RenderEnemiesController._init()
-    if not GetEnemiesFunction then
-        warn("[💻] Render Enemies Controller failed: GetEnemiesFunction not found")
-        return
-    end
-    if not EnemySpawnedEvent then
-        warn("[💻] Render Enemies Controller failed: EnemySpawnedEvent not found")
+    if not GetEnemiesFunction or not EnemySpawnedEvent or not ReplicateEnemiesEvent or not EnemyBecameSwagEvent or not ClickedOnEvent then
+        warn("[💻] Render Enemies Controller failed: One or more required events not found")
         return
     end
     print("[💻] Render Enemies Controller initialized")
@@ -96,6 +113,26 @@ function RenderEnemiesController._start()
         renderEnemy(EnemyData)
     end)
 
+    -- // TODO: Moves weirdly for a second, i think because the last position tween is still in motion
+    EnemyBecameSwagEvent.OnClientEvent:Connect(function(enemyId: string)
+        local RenderedEnemy = RenderedEnemies[enemyId]
+        if RenderedEnemy then
+            local Part = RenderedEnemy.Part
+            Part.Size = Vector3.new(4, 7.5, .01)
+            Part.Transparency = 1
+
+            -- These aren't stored anywhere because in this demo nothing further is done with them
+            local FrontDecal = Instance.new("Decal")
+            FrontDecal.Parent = Part
+            FrontDecal.Face = Enum.NormalId.Front
+            FrontDecal.Texture = "http://www.roblox.com/asset/?id=73257033"
+            local BackDecal = FrontDecal:Clone()
+            BackDecal.Face = Enum.NormalId.Back
+            BackDecal.Parent = Part
+            RenderedEnemy.Swag = true
+        end
+    end)
+
     local InitialEnemies: {[string]: DataTypes.NewEnemyRenderData} = GetEnemiesFunction:InvokeServer() -- In a real project with a larger world, we'd be making this based on chunk
     if InitialEnemies then
         for _, EnemyData in pairs(InitialEnemies) do
@@ -104,6 +141,7 @@ function RenderEnemiesController._start()
     end
 
     lastRenderedFrameId = -1 -- now we're ready to render enemy updates
+    renderSwags()
 
     print("[💻] Render Enemies Controller started")
 end
