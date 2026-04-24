@@ -173,8 +173,10 @@ function RenderEnemiesController._start()
         end
     end)
 
-    EnemySpawnedEvent.OnClientEvent:Connect(function(EnemyData: DataTypes.NewEnemyRenderData)
-        renderEnemy(EnemyData)
+    EnemySpawnedEvent.OnClientEvent:Connect(function(EnemyData: {[string]: DataTypes.NewEnemyRenderData})
+        for id, Data in pairs(EnemyData) do
+            renderEnemy(Data)
+        end
     end)
 
     EnemyBecameSwagEvent.OnClientEvent:Connect(swagify)

@@ -90,9 +90,16 @@ local function runEnemyVelocity()
         if Enemy.LivingEnemies < maxEnemies then
             sinceLastSpawn += dt
             if sinceLastSpawn >= timeBetweenEnemySpawns then
-                sinceLastSpawn -= timeBetweenEnemySpawns
-                EnemyService.spawnEnemy()
+                local enemySpawnsWithinLastFrame = math.min(math.floor(sinceLastSpawn / timeBetweenEnemySpawns), maxEnemies - Enemy.LivingEnemies)
+                sinceLastSpawn -= (timeBetweenEnemySpawns * enemySpawnsWithinLastFrame)
+                local SpawnedEnemiesData = {}
+                for i = 1, enemySpawnsWithinLastFrame do
+                    table.insert(SpawnedEnemiesData, EnemyService.spawnEnemy())
+                end
+                EnemySpawnedEvent:FireAllClients(SpawnedEnemiesData)
             end
+        else
+            sinceLastSpawn = 0
         end
 
         -- Move enemies
@@ -184,15 +191,14 @@ function EnemyService.spawnEnemy()
     local NewEnemy = Enemy.new(id, BrickColor.Random().Color)
     Enemies[id] = NewEnemy
     LastPayload[id] = {NewEnemy.Position.X, NewEnemy.Position.Z, NewEnemy.Rotation}
-    EnemySpawnedEvent:FireAllClients({
-                Id = id,
-                Color = NewEnemy.Color,
-                Size = NewEnemy.Size,
-                Swag = NewEnemy.SwagEnabled,
-                Position = NewEnemy.Position,
-                Rotation = NewEnemy.Rotation
+    return {
+            Id = id,
+            Color = NewEnemy.Color,
+            Size = NewEnemy.Size,
+            Swag = NewEnemy.SwagEnabled,
+            Position = NewEnemy.Position,
+            Rotation = NewEnemy.Rotation
         }
-    )
 end
 
 function EnemyService.killAll()
