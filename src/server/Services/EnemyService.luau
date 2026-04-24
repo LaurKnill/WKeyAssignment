@@ -4,6 +4,8 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
 -- // Requires
+local WorldService = require(script.Parent.WorldService)
+
 local Root = script.Parent.Parent
 local Objects = Root.Objects
 local Enemy = require(Objects.Enemy)
@@ -116,7 +118,13 @@ local function runEnemyBehavior()
                             Enemy.Target = nil
                             continue
                         end
-                        local distance = (Enemy.Position - Target.HumanoidRootPart.Position).Magnitude
+                        local targetPosition = Target:GetPivot().Position
+                        if not WorldService.inBoundsOfEnemyPlatform(targetPosition) then
+                            Enemy.Velocity = nil
+                            Enemy.Target = nil
+                            continue
+                        end 
+                        local distance = (Enemy.Position - targetPosition).Magnitude
                         if distance > minimumChaseDistance then
                             Enemy.Velocity = nil
                             Enemy.Target = nil
@@ -131,7 +139,10 @@ local function runEnemyBehavior()
                     if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then
                         continue
                     end
-                    local distance = (Enemy.Position - Player.Character.HumanoidRootPart.Position).Magnitude
+                    if not WorldService.inBoundsOfEnemyPlatform(Player.Character.HumanoidRootPart.Position) then
+                        continue
+                    end
+                    local distance = (Enemy.Position - Player.Character:GetPivot().Position).Magnitude
                     if distance < minimumChaseDistance then
                         TargetPlayer = Player
                         break
@@ -174,13 +185,6 @@ function EnemyService.killAll()
     end
     DestroyedEnemiesEvent:FireAllClients(Package)
 end
-
---[[
-ENEMY BEHAVIOR:
-    [ ] TODO: IGNORES PLAYERS OUTSIDE OF THE PLATFORM!
-    [x] When an enemy is close to a player, they do something. They can play an animation, attack and deal damage, or just print to console
-    [ ] (Optional) enemy wanders within their platform randomly
-]]
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Init
