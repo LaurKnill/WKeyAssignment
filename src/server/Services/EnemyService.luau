@@ -17,9 +17,9 @@ local DataTypes = require(Shared.DataTypes)
 local timeBetweenEnemySpawns = 1
 local enemiesCreated = 0
 local maxEnemies = 20
--- TODO: configurable by UI
 
 -- // Other
+local sinceLastSpawn = 0 -- deltatime elapsed since the last enemey spawn
 local renderFrame = 0
 local minimumChaseDistance = 15
 local A_Client_Has_Loaded = false -- May not be the most necessary in a live game but it prevents annoying edge cases during development where enemies are behaving before the client has registered local remotes
@@ -29,6 +29,7 @@ local EnemySpawnedEvent = Remotes.newEvent("EnemySpawned")
 local GetEnemiesFunction = Remotes.newFunction("GetEnemies")
 local ClickedOnEvent = Remotes.newEvent("ClickedOn")
 local EnemyBecameSwagEvent = Remotes.newEvent("EnemyBecameSwag")
+local DestroyedEnemiesEvent = Remotes.newEvent("DestroyedEnemies")
 local ReplicateEnemiesEvent = Remotes.newUnreliableRemoteEvent("ReplicateEnemies")
 local ChangeSettingEvent = Remotes.newEvent("ChangeSetting")
 local KillAllEvent = Remotes.newEvent("KillAll")
@@ -50,6 +51,7 @@ local function runEnemyReplication()
             renderFrame += 1
             local package = {}
             -- // Enemy data is sent including for enemies that haven't moved, which could technically be omitted, but I assume we want this for anti-cheat/consistency
+            -- TODO: payload begins exceeding at high levels of NPCs!!
             for id, Enemy in pairs(Enemies) do
                 if Enemy.SwagEnabled then
                     continue
@@ -63,6 +65,17 @@ end
 
 local function runEnemyVelocity()
     RunService.Heartbeat:Connect(function(dt)
+        -- Check enemy spawns
+        -- If enough time has passed (using dt) since the last enemy spawn, create a new enemy
+        if Enemy.LivingEnemies < maxEnemies then
+            sinceLastSpawn += dt
+            if sinceLastSpawn >= timeBetweenEnemySpawns then
+                sinceLastSpawn -= timeBetweenEnemySpawns
+                EnemyService.spawnEnemy()
+            end
+        end
+
+        -- Move enemies
         for id, Enemy in pairs(Enemies) do
             if Enemy.SwagEnabled then
                 continue -- Enemy has already touched player
@@ -133,15 +146,6 @@ local function runEnemyBehavior()
     end)
 end
 
-local function spawnInitialEnemies()
-    task.spawn(function()
-        repeat
-            EnemyService.spawnEnemy()
-            task.wait(timeBetweenEnemySpawns)
-        until enemiesCreated >= maxEnemies
-    end)
-end
-
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Public
 
@@ -162,20 +166,18 @@ function EnemyService.spawnEnemy()
 end
 
 function EnemyService.killAll()
-    -- Client UI button to kill all
-    -- TODO
+    local Package = {}
+    for id, Enemy in pairs(Enemies) do
+        Enemy:Destroy()
+        Enemies[id] = nil
+        table.insert(Package, id)
+    end
+    DestroyedEnemiesEvent:FireAllClients(Package)
 end
 
 --[[
-CUSTOM REPLICATION
-    Enemy movement should be as performant as possible in regard to replication cost
-    Submissions will be judged based on the network ‘Recv’ stat in ‘performance stats’
-]]
-
---[[
 ENEMY BEHAVIOR:
-    Enemy chases the closest player who is on their platform. Ignores players outside of the platform
-    -- TODO: IGNORES PLAYERS OUTSIDE OF THE PLATFORM!
+    [ ] TODO: IGNORES PLAYERS OUTSIDE OF THE PLATFORM!
     [x] When an enemy is close to a player, they do something. They can play an animation, attack and deal damage, or just print to console
     [ ] (Optional) enemy wanders within their platform randomly
 ]]
@@ -184,7 +186,6 @@ ENEMY BEHAVIOR:
 -- Init
 
 function EnemyService._init()
-    spawnInitialEnemies()
     runEnemyBehavior()
     runEnemyVelocity()
     runEnemyReplication()
@@ -212,12 +213,37 @@ function EnemyService._start()
         if settingName == "EnemiesPerSecond" then
             timeBetweenEnemySpawns = 1 / newValue
         elseif settingName == "MaxEnemies" then
-            maxEnemies = newValue -- TODO: if current max enemies is smaller than this number, create more. if its smaller... delete some random ones...?
+            maxEnemies = newValue
+            if maxEnemies < Enemy.LivingEnemies then
+                local package = {}
+                local enemiesToDestroy = Enemy.LivingEnemies - maxEnemies
+                local idsList = {}
+                for id, _ in pairs(Enemies) do
+                    table.insert(idsList, id)
+                end
+                local i = #idsList
+                while enemiesToDestroy > 0 and i > 0 do
+                    i -= 1
+                    local randomIndex = math.random(#idsList)
+                    local randomId = idsList[randomIndex]
+                    table.remove(idsList, randomIndex)
+                    local Enemy = Enemies[randomId]
+                    if not Enemy then
+                        warn(`Something went wrong when destroying random enemies!`)
+                        break
+                    end
+                    Enemy:Destroy()
+                    Enemies[randomId] = nil
+                    table.insert(package, randomId)
+                    enemiesToDestroy -= 1
+                end
+                DestroyedEnemiesEvent:FireAllClients(package)
+            end
         end
     end)
 
     ClickedOnEvent.OnServerEvent:Connect(function(Player: Player, enemyId: string)
-        print(`Clicked on {enemyId}`)
+        print(`Clicked on {enemyId}`) -- TODO: implement
     end)
 
     KillAllEvent.OnServerEvent:Connect(EnemyService.killAll)

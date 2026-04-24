@@ -12,6 +12,7 @@ local Config = require(Shared.Config)
 local GetEnemiesFunction = Remotes.getFunction("GetEnemies")
 local EnemySpawnedEvent = Remotes.getEvent("EnemySpawned")
 local ClickedOnEvent = Remotes.getEvent("ClickedOn")
+local DestroyedEnemiesEvent = Remotes.getEvent("DestroyedEnemies")
 local ReplicateEnemiesEvent = Remotes.getEvent("ReplicateEnemies")
 local EnemyBecameSwagEvent = Remotes.getEvent("EnemyBecameSwag")
 
@@ -32,6 +33,7 @@ local function _clickedOn()
     -- TODO: Clicking on an enemy prints its ID on both server and client
 end
 
+-- // Mark enemy as Shadow The Hedgehog
 local function swagify(enemyId: string)
     local RenderedEnemy = RenderedEnemies[enemyId]
     if RenderedEnemy then
@@ -52,7 +54,7 @@ local function swagify(enemyId: string)
 end
 
 -- // Swags face the client at all times
-local function renderSwags()
+local function _renderSwags()
     RunService.Heartbeat:Connect(function()
         for id, RenderedEnemy in pairs(RenderedEnemies) do
             if not RenderedEnemy.Swag then
@@ -116,10 +118,27 @@ end
 function RenderEnemiesController._start()
     lastRenderedFrameId = math.huge -- we're not ready to render anything yet
 
+    DestroyedEnemiesEvent.OnClientEvent:Connect(function(Package: {string})
+        for _, id in pairs(Package) do
+            local RenderedEnemy = RenderedEnemies[id]
+            if not RenderedEnemy then
+                -- I don't believe this would happen, but we'll watch out for it
+                warn(`RenderEnemiesController.DestroyedEnemiesEvent: Enemy destroyed which was never created`)
+                continue
+            end
+            local Part = RenderedEnemy.Part
+            if Part and Part.Parent then
+                Part:Destroy()
+            end
+            table.clear(RenderedEnemy)
+            RenderedEnemies[id] = nil
+        end
+    end)
+
     ReplicateEnemiesEvent.OnClientEvent:Connect(function(renderFrame: number, EnemyPackage: {[string]: {number}})
         if lastRenderedFrameId == -1 then
             -- This is the first frame; instantly place all enemies as they may have already moved greatly from their original loaded positions
-            -- (in a more professional project we could probably set up a separate initial event, disconnect that, and then setup a normal event, but that's trying too hard here)
+            -- (in a more professional project we could probably set up a separate initial event, disconnect that, and then setup a normal event, to not have to check this every time if that mattered for performance)
             lastRenderedFrameId = renderFrame
             for id, data in pairs(EnemyPackage) do
                 local RenderedEnemy = RenderedEnemies[id]
@@ -170,7 +189,7 @@ function RenderEnemiesController._start()
     end
 
     lastRenderedFrameId = -1 -- now we're ready to render enemy updates
-    renderSwags()
+    _renderSwags()
 
     print("[💻] Render Enemies Controller started")
 end

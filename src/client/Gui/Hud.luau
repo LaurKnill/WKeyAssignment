@@ -85,7 +85,16 @@ local function construct()
             TextScaled = true,
             Position = UDim2.fromScale(0, 1),
             AnchorPoint = Vector2.new(0, 1),
-            Text = MaxEnemiesSet
+            Text = MaxEnemiesSet,
+            FocusLost = function(TextBox: TextBox, Enter_Pressed: boolean, InputObject: InputObject)
+                local newSet = tonumber(TextBox.Text)
+                if not newSet then
+                    TextBox.Text = MaxEnemiesSet:Get()
+                    return
+                end
+                newSet = math.clamp(newSet, 0, 1000)
+                MaxEnemiesSet:Set(newSet)
+            end
         })
     })
 
@@ -100,7 +109,7 @@ local function construct()
         TextScaled = true,
         Parent = Gui,
         Activated = function()
-            print("kill all")
+            KillAllEvent:FireServer()
         end
     })
 end

@@ -1,6 +1,8 @@
 local Enemy = {}
 Enemy.__index = Enemy
 
+Enemy.LivingEnemies = 0
+
 export type Object = {
     Color: Color3,
     ID: number,
@@ -13,9 +15,13 @@ export type Object = {
     Velocity: Vector3?,
     Destination: Vector3?,
     Target: Model?,
+
+    MoveToTarget: (self: Object, Target: Model)->(),
+    Destroy: (self: Object)->()
 }
 
 function Enemy.new(id: number, color: Color3): Object
+    Enemy.LivingEnemies += 1
     local self = setmetatable({
         ID = id,
         Color = color,
@@ -35,6 +41,12 @@ end
 
 function Enemy:BecomeSwag()
     self.SwagEnabled = true
+end
+
+-- // Remember to remove references elsewhere!
+function Enemy:Destroy()
+    Enemy.LivingEnemies -= 1
+    table.clear(self)
 end
 
 return Enemy
