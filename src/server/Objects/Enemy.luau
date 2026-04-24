@@ -3,6 +3,9 @@ Enemy.__index = Enemy
 
 Enemy.LivingEnemies = 0
 
+local Shared = game.ReplicatedStorage.Shared
+local Config = require(Shared.Config)
+
 export type Object = {
     Color: Color3,
     ID: number,
@@ -34,6 +37,7 @@ end
 
 function Enemy:MoveToTarget(Target: Model)
     local destination = Target:GetPivot().Position
+    destination = Vector3.new(destination.X, Config.EnemyHeight, destination.Z)
     local direction = (destination - self.Position).Unit
     self.Velocity = direction * 5
     self.Destination = destination

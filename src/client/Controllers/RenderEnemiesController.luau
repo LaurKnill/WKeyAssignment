@@ -1,7 +1,10 @@
 local RenderEnemiesController = {}
 
+local Player = game:GetService("Players").LocalPlayer
+
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Root = script.Parent.Parent
 local Shared = game.ReplicatedStorage.Shared
@@ -187,6 +190,19 @@ function RenderEnemiesController._start()
             renderEnemy(EnemyData)
         end
     end
+
+    local Mouse = Player:GetMouse()
+    Mouse.Button1Down:Connect(function()
+        if Mouse.Target then
+            local Part = Mouse.Target
+            for id, EnemyData in pairs(RenderedEnemies) do
+                if EnemyData.Part == Part then
+                    ClickedOnEvent:FireServer(id)
+                    return
+                end
+            end
+        end
+    end)
 
     lastRenderedFrameId = -1 -- now we're ready to render enemy updates
     _renderSwags()

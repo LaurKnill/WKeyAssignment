@@ -95,7 +95,7 @@ local function runEnemyVelocity()
             Enemy:MoveToTarget(Target)
             local newPosition = Enemy.Position + (Velocity * dt)
             Enemy.Position = newPosition
-            if (newPosition - Enemy.Destination).Magnitude < 1 then
+            if (newPosition - Enemy.Destination).Magnitude < 6 then
                 Enemy.Velocity = nil
                 Enemy.Target = nil
                 Enemy:BecomeSwag()
@@ -247,7 +247,8 @@ function EnemyService._start()
     end)
 
     ClickedOnEvent.OnServerEvent:Connect(function(Player: Player, enemyId: string)
-        print(`Clicked on {enemyId}`) -- TODO: implement
+        local SpawnedEnemy = Enemies[enemyId]
+        print(SpawnedEnemy)
     end)
 
     KillAllEvent.OnServerEvent:Connect(EnemyService.killAll)
