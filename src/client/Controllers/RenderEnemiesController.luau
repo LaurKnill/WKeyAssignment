@@ -32,10 +32,6 @@ local lastRenderedFrameId = -1
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Local
 
-local function _clickedOn()
-    -- TODO: Clicking on an enemy prints its ID on both server and client
-end
-
 -- // Mark enemy as Shadow The Hedgehog
 local function swagify(enemyId: string)
     local RenderedEnemy = RenderedEnemies[enemyId]
@@ -181,7 +177,6 @@ function RenderEnemiesController._start()
         renderEnemy(EnemyData)
     end)
 
-    -- // TODO: Moves weirdly for a second, i think because the last position tween is still in motion
     EnemyBecameSwagEvent.OnClientEvent:Connect(swagify)
 
     local InitialEnemies: {[string]: DataTypes.NewEnemyRenderData} = GetEnemiesFunction:InvokeServer() -- In a real project with a larger world, we'd be making this based on chunk

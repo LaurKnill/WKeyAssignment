@@ -67,7 +67,6 @@ local function runEnemyReplication()
                 if Enemy.SwagEnabled then
                     continue
                 end
-                -- TODO: rotate enemy to face player
                 local last = LastPayload[id]
                 local x, z, r = Enemy.Position.X, Enemy.Position.Z, Enemy.Rotation
                 if not last or last[1] ~= x or last[2] ~= z or last[3] ~= r then

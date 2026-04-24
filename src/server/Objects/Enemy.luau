@@ -39,8 +39,10 @@ function Enemy:MoveToTarget(Target: Model)
     local destination = Target:GetPivot().Position
     destination = Vector3.new(destination.X, Config.EnemyHeight, destination.Z)
     local direction = (destination - self.Position).Unit
+    local radians = math.atan2(direction.X, direction.Z)
     self.Velocity = direction * 5
     self.Destination = destination
+    self.Rotation = math.deg(radians) % 360
 end
 
 function Enemy:BecomeSwag()
