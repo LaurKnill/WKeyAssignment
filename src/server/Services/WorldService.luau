@@ -36,6 +36,7 @@ function WorldService._init()
     EnemyPlatform.CanCollide = true
     EnemyPlatform.CanTouch = true
     EnemyPlatform.Parent = workspace
+    EnemyPlatform.Color = Color3.new(1, 1, 1)
 
     local LargerPlatform = Instance.new("Part")
     LargerPlatform.Name = "LargerPlatform"
