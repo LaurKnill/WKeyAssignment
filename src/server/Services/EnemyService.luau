@@ -1,42 +1,137 @@
 local EnemyService = {}
 
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
 -- // Requires
-local Objects = script.Parent.Parent.Objects
+local Root = script.Parent.Parent
+local Objects = Root.Objects
 local Enemy = require(Objects.Enemy)
+local Enemies = require(Root.Modules.Enemies)
+
+local Shared = game.ReplicatedStorage.Shared
+local Remotes = require(Shared.Remotes)
+local DataTypes = require(Shared.DataTypes)
 
 --[[
-1 enemy spawn per second
-20 enemies maximum (enemies stop spawning when cap is reached) 
-The above variables can be adjusted through a user-interface of any kind (billboard, physical buttons, ui, etc)
-> REMOTES
-> CONFIGURATIONS: spawns per second, max enemies
+-- TODO: 1 enemy per second until 20 max, adjustable through UI
 ]]
 
 local enemiesCreated = 0
+local renderFrame = 0
+local minimumChaseDistance = 15
+
+local EnemySpawnedEvent = Remotes.newEvent("EnemySpawned")
+local GetEnemiesFunction = Remotes.newFunction("GetEnemies")
+local ClickedOnEvent = Remotes.newEvent("ClickedOn")
+local ReplicateEnemiesEvent = Remotes.newUnreliableRemoteEvent("ReplicateEnemies")
+
+local A_Client_Has_Loaded = false -- May not be the most necessary in a live game but it prevents annoying edge cases during development where enemies are behaving before the client has registered local remotes
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Local
+
+local function runEnemyReplication()
+    task.spawn(function()
+        if not A_Client_Has_Loaded then
+            local elapsed = 0
+            repeat
+                elapsed += .1
+                task.wait(.1)
+            until A_Client_Has_Loaded or (elapsed >= 10 and not next(Players:GetPlayers())) -- is this necessary? would there be an issue caused by this thread yielding forever in a completely empty server before shutdown? i dont know. probably not. it's here
+        end
+        while task.wait(0.1) do
+            renderFrame += 1
+            local package = {}
+            for id, Enemy in pairs(Enemies) do
+                package[id] = {Enemy.Position.X, Enemy.Position.Z, Enemy.Rotation}
+            end
+            ReplicateEnemiesEvent:FireAllClients(renderFrame, package)
+        end
+    end)
+end
+
+local function runEnemyVelocity()
+    RunService.Heartbeat:Connect(function(dt)
+        for id, Enemy in pairs(Enemies) do
+            local Velocity = Enemy.Velocity
+            local Target = Enemy.Target
+            if not Velocity or not Target then
+                continue
+            end
+            if not Target.Parent then -- Target player has despawned
+                Enemy.Velocity = nil
+                Enemy.Target = nil
+                continue
+            end
+            Enemy:MoveToTarget(Target)
+            local newPosition = Enemy.Position + (Velocity * dt)
+            Enemy.Position = newPosition
+            if (newPosition - Enemy.Destination).Magnitude < 1 then
+                Enemy.Velocity = nil
+                Enemy.Target = nil
+                -- TODO: enemy has reached target (touched player?) something happens
+            end
+        end
+    end)
+end
+
+local function runEnemyBehavior()
+    task.spawn(function()
+        while task.wait(.25) do
+            for id, Enemy in pairs(Enemies) do
+                -- // Assess movement of already moving enemies
+                if Enemy.Velocity then
+                    local Target = Enemy.Target
+                    if Target then
+                        if not Target.Parent then
+                            Enemy.Velocity = nil
+                            Enemy.Target = nil
+                            continue
+                        end
+                        local distance = (Enemy.Position - Target.HumanoidRootPart.Position).Magnitude
+                        if distance > minimumChaseDistance then
+                            Enemy.Velocity = nil
+                            Enemy.Target = nil
+                            continue
+                        end
+                    end
+                    continue
+                end
+                -- // Assess chase initiation of non moving enemies
+                local TargetPlayer = nil
+                for _, Player in pairs(Players:GetPlayers()) do
+                    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then
+                        continue
+                    end
+                    local distance = (Enemy.Position - Player.Character.HumanoidRootPart.Position).Magnitude
+                    if distance < minimumChaseDistance then
+                        TargetPlayer = Player
+                        break
+                    end
+                end
+                if TargetPlayer then
+                    Enemy.Target = TargetPlayer.Character
+                    Enemy:MoveToTarget(TargetPlayer.Character)
+                end
+            end
+        end
+    end)
+end
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Public
 
 function EnemyService.spawnEnemy()
-    --[[
-        [x] 50x50 platform exists
-            [ ] Spawn enemies on it (wait for replication logic)
-        [x] Enemies have random attributes (color, material, size)
-        [x] Enemies have unique IDs
-            [ ] Replicated to client (wait for replication logic)
-            [ ] Clicking an enemy prints its ID on both server and client
-    ]]
     enemiesCreated += 1
-    local id = enemiesCreated
+    local id = tostring(enemiesCreated)
     local NewEnemy = Enemy.new(id, BrickColor.Random().Color)
-    --> REPLICATE TO CLIENT Todo:Replication
+    Enemies[id] = NewEnemy
 end
 
 function EnemyService.killAll()
     -- Client UI button to kill all
+    -- TODO
 end
 
 --[[
@@ -60,10 +155,32 @@ function EnemyService._init()
     for i = 1, 20 do -- TODO: adjustable 1 spawn per second until 20 max
         EnemyService.spawnEnemy()
     end
+    runEnemyBehavior()
+    runEnemyVelocity()
+    runEnemyReplication()
     print("[🤖] Enemy service initialized")
 end
 
 function EnemyService._start()
+    GetEnemiesFunction.OnServerInvoke = function(Player: Player)
+        A_Client_Has_Loaded = true
+        local EnemyData: {[string]: DataTypes.NewEnemyRenderData} = {}
+        for id, Enemy in pairs(Enemies) do
+            EnemyData[id] = {
+                Id = id,
+                Color = Enemy.Color,
+                Size = Enemy.Size,
+                Position = Enemy.Position,
+                Rotation = Enemy.Rotation
+            }
+        end
+        return EnemyData
+    end
+
+    ClickedOnEvent.OnServerEvent:Connect(function(Player: Player, enemyId: string)
+        print(`Clicked on {enemyId}`)
+    end)
+
     print("[🤖] Enemy service started")
 end
 

@@ -27,3 +27,8 @@ for name, ServiceModule in pairs(Services) do
         end
     end
 end
+
+local Started = Instance.new("BoolValue")
+Started.Name = "ServerStarted"
+Started.Value = true
+Started.Parent = game.ReplicatedStorage

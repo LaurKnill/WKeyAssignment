@@ -1,5 +1,10 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 if not game:IsLoaded() then
     game.Loaded:Wait()
+end
+
+if not ReplicatedStorage:FindFirstChild("ServerStarted") then
+    ReplicatedStorage:WaitForChild("ServerStarted")
 end
 
 local ControllersFolder = script:WaitForChild("Controllers")
