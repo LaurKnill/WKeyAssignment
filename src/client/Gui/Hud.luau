@@ -58,7 +58,7 @@ local function construct()
                     TextBox.Text = EnemiesPerSecondSet:Get()
                     return
                 end
-                newSet = math.clamp(newSet, 0, 1000)
+                newSet = math.clamp(newSet, 0, 10000)
                 EnemiesPerSecondSet:Set(newSet)
             end
         })
@@ -92,7 +92,7 @@ local function construct()
                     TextBox.Text = MaxEnemiesSet:Get()
                     return
                 end
-                newSet = math.clamp(newSet, 0, 1000)
+                newSet = math.clamp(newSet, 0, 10000)
                 MaxEnemiesSet:Set(newSet)
             end
         })

@@ -26,6 +26,10 @@ local renderFrame = 0
 local minimumChaseDistance = 15
 local A_Client_Has_Loaded = false -- May not be the most necessary in a live game but it prevents annoying edge cases during development where enemies are behaving before the client has registered local remotes
 
+local LastPayload: {
+    [string]: {number}
+} = {}
+
 -- // Events
 local EnemySpawnedEvent = Remotes.newEvent("EnemySpawned")
 local GetEnemiesFunction = Remotes.newFunction("GetEnemies")
@@ -40,6 +44,12 @@ local InitSettingFunction = Remotes.newFunction("InitSetting")
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Local
 
+local function destroy(E: Enemy.Object, id: string)
+    E:Destroy()
+    Enemies[id] = nil
+    LastPayload[id] = nil
+end
+
 local function runEnemyReplication()
     task.spawn(function()
         if not A_Client_Has_Loaded then
@@ -49,16 +59,25 @@ local function runEnemyReplication()
                 task.wait(.1)
             until A_Client_Has_Loaded or (elapsed >= 10 and not next(Players:GetPlayers())) -- is this necessary? would there be an issue caused by this thread yielding forever in a completely empty server before shutdown? i dont know. probably not. it's here
         end
-        while task.wait(0.1) do
+        while task.wait(0.15) do
             renderFrame += 1
             local package = {}
             -- // Enemy data is sent including for enemies that haven't moved, which could technically be omitted, but I assume we want this for anti-cheat/consistency
-            -- TODO: payload begins exceeding at high levels of NPCs!!
             for id, Enemy in pairs(Enemies) do
                 if Enemy.SwagEnabled then
                     continue
                 end
-                package[id] = {Enemy.Position.X, Enemy.Position.Z, Enemy.Rotation}
+                -- TODO: rotate enemy to face player
+                local last = LastPayload[id]
+                local x, z, r = Enemy.Position.X, Enemy.Position.Z, Enemy.Rotation
+                if not last or last[1] ~= x or last[2] ~= z or last[3] ~= r then
+                    local buff = buffer.create(5)
+                    buffer.writei16(buff, 0, x * 10) 
+                    buffer.writei16(buff, 2, z * 10)
+                    buffer.writeu8(buff, 4, (r / 360) * 255) -- Fit rotation into a 0-255
+                    package[id] = buff
+                    LastPayload[id] = {x, z, r}
+                end
             end
             ReplicateEnemiesEvent:FireAllClients(renderFrame, package)
         end
@@ -165,6 +184,7 @@ function EnemyService.spawnEnemy()
     local id = tostring(enemiesCreated)
     local NewEnemy = Enemy.new(id, BrickColor.Random().Color)
     Enemies[id] = NewEnemy
+    LastPayload[id] = {NewEnemy.Position.X, NewEnemy.Position.Z, NewEnemy.Rotation}
     EnemySpawnedEvent:FireAllClients({
                 Id = id,
                 Color = NewEnemy.Color,
@@ -178,9 +198,8 @@ end
 
 function EnemyService.killAll()
     local Package = {}
-    for id, Enemy in pairs(Enemies) do
-        Enemy:Destroy()
-        Enemies[id] = nil
+    for id, E in pairs(Enemies) do
+        destroy(E, id)
         table.insert(Package, id)
     end
     DestroyedEnemiesEvent:FireAllClients(Package)
@@ -231,13 +250,12 @@ function EnemyService._start()
                     local randomIndex = math.random(#idsList)
                     local randomId = idsList[randomIndex]
                     table.remove(idsList, randomIndex)
-                    local Enemy = Enemies[randomId]
-                    if not Enemy then
+                    local E = Enemies[randomId]
+                    if not E then
                         warn(`Something went wrong when destroying random enemies!`)
                         break
                     end
-                    Enemy:Destroy()
-                    Enemies[randomId] = nil
+                    destroy(E, randomId)
                     table.insert(package, randomId)
                     enemiesToDestroy -= 1
                 end
@@ -248,7 +266,9 @@ function EnemyService._start()
 
     ClickedOnEvent.OnServerEvent:Connect(function(Player: Player, enemyId: string)
         local SpawnedEnemy = Enemies[enemyId]
-        print(SpawnedEnemy)
+        if SpawnedEnemy then
+            print(enemyId)
+        end
     end)
 
     KillAllEvent.OnServerEvent:Connect(EnemyService.killAll)

@@ -8,3 +8,10 @@
 - I've used AI to ask how a custom replication system could be set up only in server code without workspace part replication.
 - I don't know whether the UI should be made to look nice but it isn't specified in the task description and I assume whatever project I'll be working on would have it's own UI style specifications. If I need to provide a reference of clean looking UI, I have existing projects to show.
 - I've tried to decide between tools like React/Roact to use for the UI. However, all seem bloated/excessive for a project this small, and I worry of installing my own installers (ie. aftman) interacting with things a studio project might prefer I install instead, which isn't a big concern but is just enough that it's not worth the effort. I threw together my own fake React. I also like having complete control over things for my own purposes (ie. I gave reactive values an optional debounce to easily debounce things like fast firing causing issues) which I believe is purposeful when one is working with a small independent creation or when necessary, though I assume studio projects would have their preferred tools/utilities
+- I have learned about buffers/more efficient data communication:
+  - The server communicates exactly 3 numbers per npc (position x, position z, and rotation)
+  - As an array {number, number, number}, the limit of NPCs before hitting payload size warnings was 32
+  - As a Vector3, the limit was 64 (but this also leaves the system permanently limited to 3 numbers)
+  - As a buffer with 3 f32s, the limit was 56
+  - As a buffer with 2 i6s and one u8, the limit was 91
+  So the buffer with specific sizes wins 👍

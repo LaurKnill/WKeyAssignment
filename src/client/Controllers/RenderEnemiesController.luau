@@ -143,16 +143,16 @@ function RenderEnemiesController._start()
             -- This is the first frame; instantly place all enemies as they may have already moved greatly from their original loaded positions
             -- (in a more professional project we could probably set up a separate initial event, disconnect that, and then setup a normal event, to not have to check this every time if that mattered for performance)
             lastRenderedFrameId = renderFrame
-            for id, data in pairs(EnemyPackage) do
+            for id, buff in pairs(EnemyPackage) do
                 local RenderedEnemy = RenderedEnemies[id]
                 if not RenderedEnemy then
                     print(`~ Skipping enemy not yet rendered`)
                     continue
                 end
-                local positionX = data[1]
-                local positionZ = data[2]
-                local rotation = data[3]
-                local newCFrame = CFrame.new(positionX, Config.EnemyHeight, positionZ) * CFrame.Angles(0, math.rad(rotation), 0)
+                local x = buffer.readi16(buff, 0) / 10
+                local z = buffer.readi16(buff, 2) / 10
+                local r = (buffer.readu8(buff, 4) / 255) * 360
+                local newCFrame = CFrame.new(x, Config.EnemyHeight, z) * CFrame.Angles(0, math.rad(r), 0)
                 RenderedEnemy.CFrame = newCFrame
                 RenderedEnemy.Part.CFrame = newCFrame
             end
@@ -161,17 +161,17 @@ function RenderEnemiesController._start()
         if renderFrame < lastRenderedFrameId then
             return
         end
-        for id, data in pairs(EnemyPackage) do
+        for id, buff in pairs(EnemyPackage) do
             lastRenderedFrameId = renderFrame
             local RenderedEnemy = RenderedEnemies[id]
             if not RenderedEnemy then
                 print(`~ Skipping enemy not yet rendered`)
                 continue
             end
-            local positionX = data[1]
-            local positionZ = data[2]
-            local rotation = data[3]
-            local newCFrame = CFrame.new(positionX, -5, positionZ) * CFrame.Angles(0, math.rad(rotation), 0)
+            local x = buffer.readi16(buff, 0) / 10
+            local z = buffer.readi16(buff, 2) / 10
+            local r = (buffer.readu8(buff, 4) / 255) * 360
+            local newCFrame = CFrame.new(x, Config.EnemyHeight, z) * CFrame.Angles(0, math.rad(r), 0)
             RenderedEnemy.CFrame = newCFrame
             TweenService:Create(RenderedEnemy.Part, TweenInfo.new(0.25, Enum.EasingStyle.Linear), {CFrame = newCFrame}):Play()
         end
@@ -197,6 +197,7 @@ function RenderEnemiesController._start()
             local Part = Mouse.Target
             for id, EnemyData in pairs(RenderedEnemies) do
                 if EnemyData.Part == Part then
+                    print(id)
                     ClickedOnEvent:FireServer(id)
                     return
                 end
