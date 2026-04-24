@@ -1,4 +1,10 @@
+- I use weird personal naming conventions when left to my own accord that I wouldn't be doing in a shared project with a style guide
+  lowerPascalCase = most values
+  UpperPascalCase = most complex values, such as dictionaries, objects, or instances
+  Pascal_Snake_Case = booleans
 - I have only used Rojo/Git with a branch that a superior set up for me. This is my first time setting up my own repository. I asked Chat GPT for steps.
 - I have never used a custom replication system before. That's scary
 - I'm waking way more commits than an actual project to be transparent about progress steps
 - I've used AI to ask how a custom replication system could be set up only in server code without workspace part replication.
+- I don't know whether the UI should be made to look nice but it isn't specified in the task description and I assume whatever project I'll be working on would have it's own UI style specifications. If I need to provide a reference of clean looking UI, I have existing projects to show.
+- I've tried to decide between tools like React/Roact to use for the UI. However, all seem bloated/excessive for a project this small, and I worry of installing my own installers (ie. aftman) interacting with things a studio project might prefer I install instead, which isn't a big concern but is just enough that it's not worth the effort. I threw together my own fake React. I also like having complete control over things for my own purposes (ie. I gave reactive values an optional debounce to easily debounce things like fast firing causing issues) which I believe is purposeful when one is working with a small independent creation or when necessary, though I assume studio projects would have their preferred tools/utilities
