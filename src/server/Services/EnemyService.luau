@@ -22,13 +22,18 @@ local maxEnemies = 20
 
 -- // Other
 local sinceLastSpawn = 0 -- deltatime elapsed since the last enemey spawn
-local renderFrame = 0
-local minimumChaseDistance = 15
+local MINIMUM_CHASE_DISTANCE = 15
 local A_Client_Has_Loaded = false -- May not be the most necessary in a live game but it prevents annoying edge cases during development where enemies are behaving before the client has registered local remotes
 
+-- // Replication management
+local renderFrame = 0
+local snapshotFrame = 0
 local LastPayload: {
     [string]: {number}
 } = {}
+local EnemyIdList = {} -- array of enemy ids for continuous cycling
+local cursor = 1
+local MAX_SNAPSHOT_PACKAGE = 40
 
 -- // Events
 local EnemySpawnedEvent = Remotes.newEvent("EnemySpawned")
@@ -37,6 +42,7 @@ local ClickedOnEvent = Remotes.newEvent("ClickedOn")
 local EnemyBecameSwagEvent = Remotes.newEvent("EnemyBecameSwag")
 local DestroyedEnemiesEvent = Remotes.newEvent("DestroyedEnemies")
 local ReplicateEnemiesEvent = Remotes.newUnreliableRemoteEvent("ReplicateEnemies")
+local SnapshotEvent = Remotes.newUnreliableRemoteEvent("Snapshot")
 local ChangeSettingEvent = Remotes.newEvent("ChangeSetting")
 local KillAllEvent = Remotes.newEvent("KillAll")
 local InitSettingFunction = Remotes.newFunction("InitSetting")
@@ -48,8 +54,65 @@ local function destroy(E: Enemy.Object, id: string)
     E:Destroy()
     Enemies[id] = nil
     LastPayload[id] = nil
+    local i = table.find(EnemyIdList, id)
+    if i then
+        table.remove(EnemyIdList, i)
+    else
+        warn(`debug: destroyed enemy id not found in id list`)
+    end
 end
 
+local function getReplicationData(id: string, E: Enemy.Object, x, z, r): buffer
+    local buff = buffer.create(5)
+    buffer.writei16(buff, 0, x * 10) 
+    buffer.writei16(buff, 2, z * 10)
+    buffer.writeu8(buff, 4, (r / 360) * 255) -- Fit rotation into a u8
+    LastPayload[id] = {x, z, r}
+    return buff
+end
+
+-- // Routine function that cycles through an update of every enemy regardless of movement for client replication debugging
+local function runRoutineSnapshot()
+    task.spawn(function()
+        while task.wait(3) do
+            snapshotFrame += 1
+
+            if #EnemyIdList == 0 then
+                continue
+            end
+
+            local package = {}
+            for i = 1, MAX_SNAPSHOT_PACKAGE do
+                local id = EnemyIdList[cursor]
+                local E = Enemies[id]
+                if E then
+                    local x, z, r = E.Position.X, E.Position.Z, E.Rotation
+                    if E.SwagEnabled then
+                        -- Don't communicate rotation data for swags, as their rotations are managed by the client and we can save that payload size
+                        local buff = buffer.create(4)
+                        buffer.writei16(buff, 0, x * 10) 
+                        buffer.writei16(buff, 2, z * 10)
+                    else
+                        local buff = getReplicationData(id, E, x, z, r)
+                        package[id] = buff
+                    end
+                else
+                    warn(`debug: snapshot loop detected nonexistant enemy id`)
+                end
+                cursor += 1
+                local newCount = #EnemyIdList
+                if newCount == 0 then
+                    continue
+                elseif cursor > newCount then
+                    cursor = 1
+                end
+            end
+            SnapshotEvent:FireAllClients(snapshotFrame, package)
+        end
+    end)
+end
+
+-- // Base enemy replication loop
 local function runEnemyReplication()
     task.spawn(function()
         if not A_Client_Has_Loaded then
@@ -63,19 +126,15 @@ local function runEnemyReplication()
             renderFrame += 1
             local package = {}
             -- // Enemy data is sent including for enemies that haven't moved, which could technically be omitted, but I assume we want this for anti-cheat/consistency
-            for id, Enemy in pairs(Enemies) do
-                if Enemy.SwagEnabled then
+            for id, E in pairs(Enemies) do
+                if E.SwagEnabled then
                     continue
                 end
                 local last = LastPayload[id]
-                local x, z, r = Enemy.Position.X, Enemy.Position.Z, Enemy.Rotation
+                local x, z, r = E.Position.X, E.Position.Z, E.Rotation
                 if not last or last[1] ~= x or last[2] ~= z or last[3] ~= r then
-                    local buff = buffer.create(5)
-                    buffer.writei16(buff, 0, x * 10) 
-                    buffer.writei16(buff, 2, z * 10)
-                    buffer.writeu8(buff, 4, (r / 360) * 255) -- Fit rotation into a 0-255
+                    local buff = getReplicationData(id, E, x, z, r)
                     package[id] = buff
-                    LastPayload[id] = {x, z, r}
                 end
             end
             ReplicateEnemiesEvent:FireAllClients(renderFrame, package)
@@ -150,7 +209,7 @@ local function runEnemyBehavior()
                             continue
                         end 
                         local distance = (Enemy.Position - targetPosition).Magnitude
-                        if distance > minimumChaseDistance then
+                        if distance > MINIMUM_CHASE_DISTANCE then
                             Enemy.Velocity = nil
                             Enemy.Target = nil
                             continue
@@ -168,7 +227,7 @@ local function runEnemyBehavior()
                         continue
                     end
                     local distance = (Enemy.Position - Player.Character:GetPivot().Position).Magnitude
-                    if distance < minimumChaseDistance then
+                    if distance < MINIMUM_CHASE_DISTANCE then
                         TargetPlayer = Player
                         break
                     end
@@ -191,6 +250,7 @@ function EnemyService.spawnEnemy()
     local NewEnemy = Enemy.new(id, BrickColor.Random().Color)
     Enemies[id] = NewEnemy
     LastPayload[id] = {NewEnemy.Position.X, NewEnemy.Position.Z, NewEnemy.Rotation}
+    table.insert(EnemyIdList, id)
     return {
             Id = id,
             Color = NewEnemy.Color,
@@ -217,6 +277,7 @@ function EnemyService._init()
     runEnemyBehavior()
     runEnemyVelocity()
     runEnemyReplication()
+    runRoutineSnapshot()
     print("[🤖] Enemy service initialized")
 end
 

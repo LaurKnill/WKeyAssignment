@@ -18,6 +18,7 @@ local ClickedOnEvent = Remotes.getEvent("ClickedOn")
 local DestroyedEnemiesEvent = Remotes.getEvent("DestroyedEnemies")
 local ReplicateEnemiesEvent = Remotes.getEvent("ReplicateEnemies")
 local EnemyBecameSwagEvent = Remotes.getEvent("EnemyBecameSwag")
+local SnapshotEvent = Remotes.getEvent("Snapshot")
 
 local RenderedEnemies: {
     [string]: {
@@ -28,6 +29,7 @@ local RenderedEnemies: {
 } = {}
 
 local lastRenderedFrameId = -1
+local lastSnapshotFrameId = -1
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Local
@@ -36,6 +38,9 @@ local lastRenderedFrameId = -1
 local function swagify(enemyId: string)
     local RenderedEnemy = RenderedEnemies[enemyId]
     if RenderedEnemy then
+        if RenderedEnemy.Swag then
+            return -- This can happen during snapshot receipts
+        end
         local Part = RenderedEnemy.Part
         Part.Size = Vector3.new(4, 7.5, .01)
         Part.Transparency = 1
@@ -134,7 +139,35 @@ function RenderEnemiesController._start()
         end
     end)
 
-    ReplicateEnemiesEvent.OnClientEvent:Connect(function(renderFrame: number, EnemyPackage: {[string]: {number}})
+    SnapshotEvent.OnClientEvent:Connect(function(snapshotFrame, EnemyPackage: {[string]: buffer})
+        if snapshotFrame < lastSnapshotFrameId then
+            return
+        end
+        for id, buff in pairs(EnemyPackage) do
+            lastSnapshotFrameId = snapshotFrame
+            local RenderedEnemy = RenderedEnemies[id]
+            if not RenderedEnemy then
+                print(`~ Skipping enemy not yet rendered`)
+                continue
+            end
+            local x = buffer.readi16(buff, 0) / 10
+            local z = buffer.readi16(buff, 2) / 10
+            local r = buffer.readu8(buff, 4)
+            local newCFrame
+            if r then
+                r = (r/255) * 360
+                newCFrame = CFrame.new(x, Config.EnemyHeight, z) * CFrame.Angles(0, math.rad(r), 0)
+            else
+                -- No rotation data = enemy is swagged (clientside is managing constant clientside-facing orientation)
+                newCFrame = RenderedEnemy.CFrame.Rotation + Vector3.new(x, Config.EnemyHeight, z)
+                swagify(id)
+            end
+            RenderedEnemy.CFrame = newCFrame
+            TweenService:Create(RenderedEnemy.Part, TweenInfo.new(3, Enum.EasingStyle.Linear), {CFrame = newCFrame}):Play()
+        end
+    end)
+
+    ReplicateEnemiesEvent.OnClientEvent:Connect(function(renderFrame: number, EnemyPackage: {[string]: buffer})
         if lastRenderedFrameId == -1 then
             -- This is the first frame; instantly place all enemies as they may have already moved greatly from their original loaded positions
             -- (in a more professional project we could probably set up a separate initial event, disconnect that, and then setup a normal event, to not have to check this every time if that mattered for performance)
@@ -169,7 +202,7 @@ function RenderEnemiesController._start()
             local r = (buffer.readu8(buff, 4) / 255) * 360
             local newCFrame = CFrame.new(x, Config.EnemyHeight, z) * CFrame.Angles(0, math.rad(r), 0)
             RenderedEnemy.CFrame = newCFrame
-            TweenService:Create(RenderedEnemy.Part, TweenInfo.new(0.25, Enum.EasingStyle.Linear), {CFrame = newCFrame}):Play()
+            TweenService:Create(RenderedEnemy.Part, TweenInfo.new(0.15, Enum.EasingStyle.Linear), {CFrame = newCFrame}):Play()
         end
     end)
 
