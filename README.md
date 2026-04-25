@@ -30,11 +30,11 @@
 # Exact uses of AI
 - I asked Chat GPT how to set up my own repository. I have plugins installed and familiarity with git from other studio projects, but have never set up my own repository with rojo. I had no trouble.
 - I've never created a custom replication system before. I asked chat gpt / google's AI search how to set up a custom enemy physics system (without using any parts in the workspace replicated from the server).
-- It confirmed using a heartbeat for physics/velocity and a separate slower loop for sending data updates, which I'd expected.
-- I learned what UnreliableRemoteEvents are and looked them up to learn that they are standard for high-frequency data updates like NPC movement replication.
-- I learned how buffers work in that you define their size and then write values of certain types to them.
+  - It confirmed using a heartbeat for physics/velocity and a separate slower loop for sending data updates, which I'd expected.
+  - I learned what UnreliableRemoteEvents are and looked them up to learn that they are standard for high-frequency data updates like NPC movement replication.
+  - I learned how buffers work in that you define their size and then write values of certain types to them.
 - I tried asking Chat GPT about how to set up React in VSC--which I'd previously only used in Studio--and eventually felt that it wasn't worth it as I could achieve what I wanted for a project of this scale much more simply.
-- I enjoy making my own code for purposes like this for personal projects because I can be sure that there's no bloat (functionality that I am not using) and I have complete control and understanding of what everything does.
-- I assume I wouldn't be doing that as often for a studio project as there would be shared tools that the team is using that everyone should use the same way.
+  - I enjoy making my own code for purposes like this for personal projects because I can be sure that there's no bloat (functionality that I am not using) and I have complete control and understanding of what everything does.
+  - I assume I wouldn't be doing that as often for a studio project as there would be shared tools that the team is using that everyone should use the same way.
 - I created the CreateElement code on my own but asked AI how to set up a reactive value that updates live in response to changes elsewhere.
-- I used it as a way to generate example code that helped as a reference for writing my own code that was similar but with full review and changes; in particular things like my naming conventions, descriptive comments, having type specifications, storing cleanup functions the way intended to be used by other modules, adding :SafeSet and adding debounce support.
+  - I used it as a way to generate example code that helped as a reference for writing my own code that was similar but with full review and changes; in particular things like my naming conventions, descriptive comments, having type specifications, storing cleanup functions the way intended to be used by other modules, adding :SafeSet and adding debounce support.
