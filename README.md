@@ -4,7 +4,7 @@
 - Existing spawns update live as the spawn rate and maximum change, and will reduce if the maximum is limited
 - Enemies, when clicked on, print their ID on the client and server
 - Enemies are purely clientside rendered using replication data from the server using buffers sent across unreliable remote events
-- Enemies move towards the player if the player is on the platform. When they get close enough to the player, they become Shadow the Hedgehog and stop moving (except for clientside rotation to face the player)
+- Enemies move towards the closest player of any player on the platform and cease moving if no player is on the platform. When they get close enough to the player, they become Shadow the Hedgehog and stop moving (except for clientside rotation to face the player)
 - The game can handle hundreds of enemies at once without affecting performance or causing movement lag visible to the player. If replication packages are lost, there is a routine backup replication loop that runs through every NPC.
 
 # Thought process notes:
