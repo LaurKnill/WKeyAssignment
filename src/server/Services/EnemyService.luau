@@ -22,7 +22,6 @@ local maxEnemies = 20
 
 -- // Other
 local sinceLastSpawn = 0 -- deltatime elapsed since the last enemey spawn
-local MINIMUM_CHASE_DISTANCE = 15
 local A_Client_Has_Loaded = false -- May not be the most necessary in a live game but it prevents annoying edge cases during development where enemies are behaving before the client has registered local remotes
 
 -- // Replication management
@@ -125,7 +124,6 @@ local function runEnemyReplication()
         while task.wait(0.15) do
             renderFrame += 1
             local package = {}
-            -- // Enemy data is sent including for enemies that haven't moved, which could technically be omitted, but I assume we want this for anti-cheat/consistency
             for id, E in pairs(Enemies) do
                 if E.SwagEnabled then
                     continue
@@ -193,32 +191,9 @@ local function runEnemyBehavior()
     task.spawn(function()
         while task.wait(.25) do
             for id, Enemy in pairs(Enemies) do
-                -- // Assess movement of already moving enemies
-                if Enemy.Velocity then
-                    local Target = Enemy.Target
-                    if Target then
-                        if not Target.Parent then
-                            Enemy.Velocity = nil
-                            Enemy.Target = nil
-                            continue
-                        end
-                        local targetPosition = Target:GetPivot().Position
-                        if not WorldService.inBoundsOfEnemyPlatform(targetPosition) then
-                            Enemy.Velocity = nil
-                            Enemy.Target = nil
-                            continue
-                        end 
-                        local distance = (Enemy.Position - targetPosition).Magnitude
-                        if distance > MINIMUM_CHASE_DISTANCE then
-                            Enemy.Velocity = nil
-                            Enemy.Target = nil
-                            continue
-                        end
-                    end
-                    continue
-                end
-                -- // Assess chase initiation of non moving enemies
-                local TargetPlayer = nil
+                -- // Chase closest player that is on the platform
+                local ClosestPlayer = nil
+                local closestDistance = math.huge
                 for _, Player in pairs(Players:GetPlayers()) do
                     if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then
                         continue
@@ -227,14 +202,17 @@ local function runEnemyBehavior()
                         continue
                     end
                     local distance = (Enemy.Position - Player.Character:GetPivot().Position).Magnitude
-                    if distance < MINIMUM_CHASE_DISTANCE then
-                        TargetPlayer = Player
-                        break
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        ClosestPlayer = Player
                     end
                 end
-                if TargetPlayer then
-                    Enemy.Target = TargetPlayer.Character
-                    Enemy:MoveToTarget(TargetPlayer.Character)
+                if ClosestPlayer then
+                    Enemy.Target = ClosestPlayer.Character
+                    Enemy:MoveToTarget(Enemy.Target)
+                else
+                    Enemy.Velocity = nil
+                    Enemy.Target = nil
                 end
             end
         end
