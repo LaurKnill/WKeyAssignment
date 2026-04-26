@@ -5,7 +5,7 @@
 - Enemies, when clicked on, print their ID on the client and server
 - Enemies are purely clientside rendered using replication data from the server using buffers sent across unreliable remote events
 - Enemies move towards the closest player of any player on the platform and cease moving if no player is on the platform. When they get close enough to the player, they become Shadow the Hedgehog and stop moving (except for clientside rotation to face the player)
-- The game can handle hundreds of enemies at once without affecting performance or causing movement lag visible to the player. If replication packages are lost, there is a routine backup replication loop that runs through every NPC.
+- The game can handle ~80 moving enemies before experiencing movement lag. If replication packages are lost, there is a routine backup replication loop that runs through every NPC.
 
 # Thought process notes:
 - I use weird personal naming conventions when left to my own accord that I presume I wouldn't be doing in a project with a style guide
@@ -18,7 +18,7 @@
 - I don't know whether the UI should be made to look nice but it isn't specified in the task description and I assume whatever project I'll be working on would have it's own UI style specifications. If I need to provide a reference of clean looking UI, I have existing projects to show.
 - I've tried to decide between tools like React/Roact to use for the UI. However, all seem bloated/excessive for a project this small, and I worry of installing my own installers (ie. aftman) interacting with things a studio project might prefer I install instead, which isn't a big concern but is just enough that it doesn't feel worth the effort. I threw together my own fake React. I also like having complete control over things for my own purposes (ie. I gave reactive values an optional debounce to easily instate how often the client can update the server with value changes for performance) which I believe is purposeful when one is working with a small independent creation or when necessary, though I assume studio projects would have their preferred tools/utilities
 - I have learned about buffers/strategies for communicaton of tons of data:
-  - The server communicates exactly 3 numbers per NPC (position x, position z, and rotation) and I tested efficiency of payload size by sending information on every enemy per tick regardless of whether their data had changed (for actual performance, I later made it only update the data of moving enemies, except in the snapshots)
+  - The server communicates exactly 3 numbers per NPC (position x, position z, and rotation) and I tested efficiency of payload size by sending information on every enemy per tick regardless of whether their data had changed and remaining off-platform (for actual performance, I later made it only update the data of moving enemies, except in the snapshots)
   - As an array {number, number, number}, the limit of NPCs before hitting payload size warnings was 32
   - As a Vector3, the limit was 64 (but this also leaves the system permanently limited to 3 numbers)
   - As a buffer with 3 f32s, the limit was 56
